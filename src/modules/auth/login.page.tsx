@@ -1,29 +1,53 @@
 import React, { useState } from 'react';
 import { CreditCard, Lock, Mail, ArrowRight } from 'lucide-react';
-import { motion } from 'motion/react';
 import { cn } from '../../lib/utils';
-import { supabase } from '../../lib/supabase';
+import { authService } from './auth.service';
+import logo from "../../assets/logo.png";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
-    
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      setErrorMsg(error.message);
+    setSuccessMsg('');
+
+    if (mode === 'signup' && password !== confirmPassword) {
+      setErrorMsg('As senhas não coincidem');
       setIsLoading(false);
       return;
+    }
+
+    try {
+      const { error } = mode === 'login'
+        ? await authService.signIn(email, password)
+        : await authService.signUp(email, password);
+
+      if (error) {
+        // Tratar erro de rate limit de forma mais amigável
+        if (error.status === 429) {
+          setErrorMsg('Muitas solicitações. Por favor, aguarde alguns minutos antes de tentar novamente.');
+        } else {
+          setErrorMsg(error.message);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (mode === 'signup') {
+        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail de confirmação.');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      setErrorMsg('Ocorreu um erro inesperado. Tente novamente mais tarde.');
+      setIsLoading(false);
     }
   };
 
@@ -36,54 +60,29 @@ export default function LoginPage() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <motion.div 
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="flex justify-center"
-        >
+        <div className="flex justify-center">
           <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center p-2 shadow-xl shadow-slate-200 border border-slate-100">
-            <img 
-              src="https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=200&h=200" 
+            <img
+              src={logo}
               alt="Suporte Agrícola"
-              className="w-full h-full object-contain"
-              referrerPolicy="no-referrer"
+              className="..."
             />
           </div>
-        </motion.div>
-        <motion.h2 
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900"
-        >
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
           Suporte Agrícola
-        </motion.h2>
-        <motion.p 
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
-          className="mt-2 text-center text-sm text-slate-500 font-medium"
-        >
-          Sistema de Conciliação Suporte Agrícola
-        </motion.p>
-        <motion.p 
-          initial={{ y: 10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-          className="mt-1 text-center text-xs text-emerald-600 font-bold"
-        >
-          {errorMsg && <span className="text-rose-600 block mb-2">{errorMsg}</span>}
-          Acesso Restrito - Conciliador Cartões
-        </motion.p>
+        </h2>
+        <p className="mt-2 text-center text-sm text-slate-500 font-medium">
+          {mode === 'login' ? 'Sistema de Conciliação Suporte Agrícola' : 'Crie sua conta para começar'}
+        </p>
+        <div className="mt-4">
+          <p className="text-center text-xs text-emerald-600 font-bold">
+            Acesso Restrito - Conciliador Cartões
+          </p>
+        </div>
       </div>
 
-      <motion.div 
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-        className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"
-      >
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl shadow-slate-200/50 sm:rounded-3xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
@@ -120,7 +119,7 @@ export default function LoginPage() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -129,6 +128,30 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-bold text-slate-700">
+                  Confirmar Senha
+                </label>
+                <div className="mt-2 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent sm:text-sm transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -150,6 +173,11 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="mt-2 min-h-[20px]">
+              {errorMsg && <p className="text-center text-xs text-rose-600 font-bold animate-in fade-in slide-in-from-top-1">{errorMsg}</p>}
+              {successMsg && <p className="text-center text-xs text-emerald-600 font-bold animate-in fade-in slide-in-from-top-1">{successMsg}</p>}
+            </div>
+
             <div>
               <button
                 type="submit"
@@ -163,7 +191,7 @@ export default function LoginPage() {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    Entrar
+                    {mode === 'login' ? 'Entrar' : 'Cadastrar'}
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -186,14 +214,19 @@ export default function LoginPage() {
             <div className="mt-6">
               <button
                 type="button"
+                onClick={() => {
+                  setMode(mode === 'login' ? 'signup' : 'login');
+                  setErrorMsg('');
+                  setSuccessMsg('');
+                }}
                 className="w-full flex justify-center py-3 px-4 border-2 border-slate-200 rounded-xl shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all"
               >
-                Criar uma conta
+                {mode === 'login' ? 'Criar uma conta' : 'Já tenho uma conta'}
               </button>
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

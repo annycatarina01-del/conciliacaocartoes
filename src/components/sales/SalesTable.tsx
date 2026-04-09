@@ -10,6 +10,8 @@ interface SalesTableProps {
   onUpdateStatus: (id: string, status: 'pending' | 'concilied') => void;
   onDelete: (id: string) => void;
   canConfirmReconciliation?: boolean;
+  canDelete?: boolean;
+  canEditInvoice?: boolean;
 }
 
 export const SalesTable: React.FC<SalesTableProps> = ({ 
@@ -18,7 +20,9 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   onUpdateObservation, 
   onUpdateStatus, 
   onDelete,
-  canConfirmReconciliation = true
+  canConfirmReconciliation = true,
+  canDelete = true,
+  canEditInvoice = true,
 }) => {
   return (
     <div className="overflow-x-auto">
@@ -90,8 +94,12 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                     type="text"
                     placeholder="Número da NF"
                     value={sale.invoiceNumber || ''}
-                    onChange={(e) => onUpdateInvoice(sale.id, e.target.value)}
-                    className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all w-32"
+                    onChange={(e) => canEditInvoice && onUpdateInvoice(sale.id, e.target.value)}
+                    readOnly={!canEditInvoice}
+                    className={cn(
+                      "pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all w-32",
+                      !canEditInvoice && "cursor-not-allowed opacity-60"
+                    )}
                   />
                 </div>
               </td>
@@ -108,13 +116,15 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                 </div>
               </td>
               <td className="px-6 py-4">
-                <button
-                  onClick={() => onDelete(sale.id)}
-                  className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                  title="Excluir transação"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {canDelete && (
+                  <button
+                    onClick={() => onDelete(sale.id)}
+                    className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                    title="Excluir transação"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </td>
             </tr>
           ))}

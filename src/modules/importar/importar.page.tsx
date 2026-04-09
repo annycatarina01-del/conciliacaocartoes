@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SalesService } from '../../services/sales.service';
 import { Sale, Provider, ImportedFile, Company } from '../../types/sales';
+import { UserPermissions } from '../../types/permissions';
 import { PdfUploader } from '../../components/sales/PdfUploader';
 import { FileSpreadsheet, CheckCircle2, AlertCircle, ArrowRight, Trash2, CreditCard, FileText, Calendar, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,9 +9,10 @@ import { cn } from '../../lib/utils';
 
 interface ImportarPageProps {
   company: Company;
+  permissions: UserPermissions;
 }
 
-export default function ImportarPage({ company }: ImportarPageProps) {
+export default function ImportarPage({ company, permissions }: ImportarPageProps) {
   const [tempSales, setTempSales] = useState<Sale[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -168,9 +170,17 @@ export default function ImportarPage({ company }: ImportarPageProps) {
         </div>
 
         {/* Uploader Section */}
-        <div className="bg-white p-2 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
-          <PdfUploader onTextExtracted={handleTextExtracted} isProcessing={isProcessing} />
-        </div>
+        {permissions.importar.upload ? (
+          <div className="bg-white p-2 rounded-[2.5rem] border border-slate-200/60 shadow-sm">
+            <PdfUploader onTextExtracted={handleTextExtracted} isProcessing={isProcessing} />
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-10 text-center">
+            <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-sm font-bold text-slate-500">Sem permissão para importar arquivos.</p>
+            <p className="text-xs text-slate-400 mt-1">Contate o administrador para solicitar acesso.</p>
+          </div>
+        )}
 
         <AnimatePresence>
           {error && (
@@ -349,13 +359,15 @@ export default function ImportarPage({ company }: ImportarPageProps) {
                         <span className="text-sm font-bold text-slate-900 tabular-nums">{file.salesCount}</span>
                       </td>
                       <td className="px-8 py-4">
-                        <button
-                          onClick={() => handleDeleteFile(file.id)}
-                          className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                          title="Excluir arquivo e vendas"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {permissions.importar.deleteFile && (
+                          <button
+                            onClick={() => handleDeleteFile(file.id)}
+                            className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                            title="Excluir arquivo e vendas"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -1,7 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Sale, ExtractionResult, Provider, ImportedFile, Company } from "../types/sales";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const getAI = () => {
+  const key = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!key) return null;
+  return new GoogleGenAI({ apiKey: key });
+};
 
 export class SalesService {
   private static getStorageKey(company: Company): string {
@@ -13,6 +17,10 @@ export class SalesService {
   }
 
   static async extractSalesFromText(text: string, provider: Provider): Promise<ExtractionResult> {
+    const ai = getAI();
+    if (!ai) {
+      return { sales: [], error: "Configuração de IA (Gemini API Key) não encontrada." };
+    }
     try {
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -90,9 +98,9 @@ export class SalesService {
 
   static updateSaleInvoice(company: Company, saleId: string, invoiceNumber: string): void {
     const sales = this.getSales(company);
-    const updatedSales = sales.map(s => 
-      s.id === saleId 
-        ? { ...s, invoiceNumber } 
+    const updatedSales = sales.map(s =>
+      s.id === saleId
+        ? { ...s, invoiceNumber }
         : s
     );
     this.saveSales(company, updatedSales);
@@ -100,9 +108,9 @@ export class SalesService {
 
   static updateSaleStatus(company: Company, saleId: string, status: 'pending' | 'concilied'): void {
     const sales = this.getSales(company);
-    const updatedSales = sales.map(s => 
-      s.id === saleId 
-        ? { ...s, status } 
+    const updatedSales = sales.map(s =>
+      s.id === saleId
+        ? { ...s, status }
         : s
     );
     this.saveSales(company, updatedSales);
@@ -110,9 +118,9 @@ export class SalesService {
 
   static updateSaleObservation(company: Company, saleId: string, observation: string): void {
     const sales = this.getSales(company);
-    const updatedSales = sales.map(s => 
-      s.id === saleId 
-        ? { ...s, observation } 
+    const updatedSales = sales.map(s =>
+      s.id === saleId
+        ? { ...s, observation }
         : s
     );
     this.saveSales(company, updatedSales);

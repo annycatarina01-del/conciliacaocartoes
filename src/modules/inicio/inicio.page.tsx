@@ -6,7 +6,6 @@ import { COMPANY_DATA } from '../../constants/companies';
 import { SalesTable } from '../../components/sales/SalesTable';
 import { LayoutDashboard, TrendingUp, CheckCircle, Clock, CreditCard, CalendarDays, Download } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -243,7 +242,7 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="kpi-card">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Transações {activeTab}</p>
-          <p className="text-3xl font-bold text-slate-900 tabular-nums">{filteredSales.length}</p>
+          <p className="text-3xl font-bold text-slate-900 tabular-nums"><span>{filteredSales.length}</span></p>
           <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
             <span>VOLUME TOTAL EXTRAÍDO</span>
@@ -252,7 +251,7 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
         <div className="kpi-card">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Volume Financeiro</p>
           <p className="text-3xl font-bold text-slate-900 tabular-nums">
-            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalAmount)}
+            <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalAmount)}</span>
           </p>
           <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-emerald-500">
             <TrendingUp className="w-3 h-3" />
@@ -262,14 +261,13 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
         <div className="kpi-card">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Status de Conciliação</p>
           <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold text-emerald-600 tabular-nums">{linkedCount}</p>
-            <p className="text-sm text-slate-400 font-medium">de {filteredSales.length} conciliadas</p>
+            <p className="text-3xl font-bold text-emerald-600 tabular-nums"><span>{linkedCount}</span></p>
+            <p className="text-sm text-slate-400 font-medium">de <span>{filteredSales.length}</span> conciliadas</p>
           </div>
           <div className="mt-4 w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${(linkedCount / (filteredSales.length || 1)) * 100}%` }}
-              className="h-full bg-emerald-500 rounded-full"
+            <div 
+              style={{ width: `${(linkedCount / (filteredSales.length || 1)) * 100}%` }}
+              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
             />
           </div>
         </div>
@@ -291,13 +289,15 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
           </div>
           
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleExportPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm"
-            >
-              <Download className="w-4 h-4" />
-              Exportar PDF
-            </button>
+            {permissions.inicio.export && (
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-600 transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Exportar PDF
+              </button>
+            )}
             <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-500 shadow-sm">
               <Clock className="w-3.5 h-3.5" />
               ÚLTIMA ATUALIZAÇÃO: AGORA
@@ -311,58 +311,47 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
             onUpdateInvoice={handleUpdateInvoice} 
             onUpdateObservation={handleUpdateObservation}
             onUpdateStatus={handleUpdateStatus}
-            onDelete={handleDeleteSale} 
+            onDelete={handleDeleteSale}
+            canDelete={permissions.inicio.deleteTransaction}
+            canEditInvoice={permissions.inicio.editInvoice}
             canConfirmReconciliation={permissions.inicio.confirmReconciliation}
           />
         </div>
       </section>
 
       {/* Confirmation Modal for Sale Delete */}
-      <AnimatePresence>
-        {saleToDelete && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100"
-            >
-              <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mb-6">
-                <CreditCard className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Excluir Transação?</h3>
-              <p className="text-sm text-slate-500 leading-relaxed mb-8">
-                Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setSaleToDelete(null)}
-                  className="flex-1 py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-sm font-bold transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDeleteSale}
-                  className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-rose-100"
-                >
-                  Excluir
-                </button>
-              </div>
-            </motion.div>
+      {saleToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100">
+            <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mb-6">
+              <CreditCard className="w-6 h-6" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Excluir Transação?</h3>
+            <p className="text-sm text-slate-500 leading-relaxed mb-8">
+              Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSaleToDelete(null)}
+                className="flex-1 py-3 px-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-sm font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteSale}
+                className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-rose-100"
+              >
+                Excluir
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       {/* Empty Export Alert */}
-      <AnimatePresence>
-        {showEmptyExportAlert && (
+      {showEmptyExportAlert && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100"
-            >
+            <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100">
               <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-6">
                 <Download className="w-6 h-6" />
               </div>
@@ -376,10 +365,9 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
               >
                 Entendido
               </button>
-            </motion.div>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+      )}
     </div>
   );
 }
