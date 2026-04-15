@@ -2,7 +2,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Sale, ExtractionResult, Provider, ImportedFile, Company } from "../types/sales";
 
 const getAI = () => {
-  const key = import.meta.env.VITE_GEMINI_API_KEY;
+  const key = import.meta.env.VITE_GEMINI_API_KEY || 
+              (typeof process !== 'undefined' && process.env ? process.env.GEMINI_API_KEY : null);
   if (!key) return null;
   return new GoogleGenAI({ apiKey: key });
 };
