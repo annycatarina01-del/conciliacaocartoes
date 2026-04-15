@@ -45,7 +45,20 @@ export default function ImportarPage({ company, permissions }: ImportarPageProps
         return;
       }
 
-      setTempSales(result.sales);
+      const sortedSales = [...result.sales].sort((a, b) => {
+        const parseDate = (d?: string) => {
+          if (!d) return 0;
+          if (d.includes('/')) {
+            const [day, month, year] = d.split('/');
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+          }
+          return new Date(d).getTime();
+        };
+        return parseDate(a.date) - parseDate(b.date);
+      });
+
+      setTempSales(sortedSales as Sale[]);
+
     } catch (err) {
       console.error("Erro no processamento:", err);
       setError("Erro ao processar o arquivo PDF. Verifique se o formato é legível.");

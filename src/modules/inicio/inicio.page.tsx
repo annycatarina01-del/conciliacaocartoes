@@ -83,26 +83,39 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
     return Array.from(months).sort().reverse();
   }, [sales]);
 
-  const filteredSales = sales.filter(s => {
-    if (s.provider !== activeTab) return false;
-    if (selectedMonth === 'all') return true;
-    
-    let dateObj;
-    if (s.date.includes('/')) {
-      const parts = s.date.split('/');
-      if (parts.length === 3) {
-        dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      }
-    } else {
-      dateObj = new Date(s.date);
-    }
-    
-    if (dateObj && !isNaN(dateObj.getTime())) {
-      const monthStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-      return monthStr === selectedMonth;
-    }
-    return false;
-  });
+  const filteredSales = useMemo(() => {
+    return sales
+      .filter(s => {
+        if (s.provider !== activeTab) return false;
+        if (selectedMonth === 'all') return true;
+        
+        let dateObj;
+        if (s.date.includes('/')) {
+          const parts = s.date.split('/');
+          if (parts.length === 3) {
+            dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          }
+        } else {
+          dateObj = new Date(s.date);
+        }
+        
+        if (dateObj && !isNaN(dateObj.getTime())) {
+          const monthStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+          return monthStr === selectedMonth;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        const parseDate = (d: string) => {
+          if (d.includes('/')) {
+            const [day, month, year] = d.split('/');
+            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
+          }
+          return new Date(d).getTime();
+        };
+        return parseDate(a.date) - parseDate(b.date);
+      });
+  }, [sales, activeTab, selectedMonth]);
 
   const linkedCount = filteredSales.filter(s => s.status === 'concilied').length;
   const totalAmount = filteredSales.reduce((acc, s) => acc + s.amount, 0);
