@@ -10,11 +10,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 interface InicioPageProps {
+  organizationId: string | null;
   company: Company;
   permissions: UserPermissions;
 }
 
-export default function InicioPage({ company, permissions }: InicioPageProps) {
+export default function InicioPage({ organizationId, company, permissions }: InicioPageProps) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [activeTab, setActiveTab] = useState<Provider>('PagBank');
   const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
@@ -26,32 +27,45 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
   });
 
   useEffect(() => {
-    setSales(SalesService.getSales(company));
-  }, [company]);
+    const loadData = async () => {
+      if (organizationId) {
+        const data = await SalesService.getSales(organizationId);
+        setSales(data);
+      }
+    };
+    loadData();
+  }, [organizationId, company]);
 
-  const handleUpdateInvoice = (id: string, invoice: string) => {
-    SalesService.updateSaleInvoice(company, id, invoice);
-    setSales(SalesService.getSales(company));
+  const handleUpdateInvoice = async (id: string, invoice: string) => {
+    if (!organizationId) return;
+    await SalesService.updateSaleInvoice(organizationId, id, invoice);
+    const data = await SalesService.getSales(organizationId);
+    setSales(data);
   };
 
-  const handleUpdateObservation = (id: string, observation: string) => {
-    SalesService.updateSaleObservation(company, id, observation);
-    setSales(SalesService.getSales(company));
+  const handleUpdateObservation = async (id: string, observation: string) => {
+    if (!organizationId) return;
+    await SalesService.updateSaleObservation(organizationId, id, observation);
+    const data = await SalesService.getSales(organizationId);
+    setSales(data);
   };
 
-  const handleUpdateStatus = (id: string, status: 'pending' | 'concilied') => {
-    SalesService.updateSaleStatus(company, id, status);
-    setSales(SalesService.getSales(company));
+  const handleUpdateStatus = async (id: string, status: 'pending' | 'concilied') => {
+    if (!organizationId) return;
+    await SalesService.updateSaleStatus(organizationId, id, status);
+    const data = await SalesService.getSales(organizationId);
+    setSales(data);
   };
 
   const handleDeleteSale = (id: string) => {
     setSaleToDelete(id);
   };
 
-  const confirmDeleteSale = () => {
-    if (saleToDelete) {
-      SalesService.deleteSale(company, saleToDelete);
-      setSales(SalesService.getSales(company));
+  const confirmDeleteSale = async () => {
+    if (saleToDelete && organizationId) {
+      await SalesService.deleteSale(organizationId, saleToDelete);
+      const data = await SalesService.getSales(organizationId);
+      setSales(data);
       setSaleToDelete(null);
     }
   };

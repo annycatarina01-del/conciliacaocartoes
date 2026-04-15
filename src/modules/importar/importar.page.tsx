@@ -12,11 +12,12 @@ import { cn } from '../../lib/utils';
 import { PdfUploader } from '../../components/sales/PdfUploader';
 
 interface ImportarPageProps {
+  organizationId: string | null;
   company: Company;
   permissions: UserPermissions;
 }
 
-export default function ImportarPage({ company, permissions }: ImportarPageProps) {
+export default function ImportarPage({ organizationId, company, permissions }: ImportarPageProps) {
   const [tempSales, setTempSales] = useState<Sale[]>([]);
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,8 +29,17 @@ export default function ImportarPage({ company, permissions }: ImportarPageProps
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    setImportedFiles(SalesService.getImportedFiles(company));
-  }, [company]);
+    const loadData = async () => {
+      if (organizationId) {
+        // Tentar migrar se houver dados locais
+        await SalesService.migrateFromLocalStorage(organizationId, company);
+        
+        const files = await SalesService.getImportedFiles(organizationId);
+        setImportedFiles(files);
+      }
+    };
+    loadData();
+  }, [organizationId, company]);
 
   const handlePdfExtracted = useCallback(async (text: string, fileName: string) => {
     setIsProcessing(true);
@@ -67,8 +77,8 @@ export default function ImportarPage({ company, permissions }: ImportarPageProps
     }
   }, [selectedProvider]);
 
-  const handleConfirmImport = () => {
-    if (!currentFileName) return;
+  const handleConfirmImport = async () => {
+    if (!currentFileName || !organizationId) return;
 
     const fileId = crypto.randomUUID();
     const newFile: ImportedFile = {
@@ -81,23 +91,24 @@ export default function ImportarPage({ company, permissions }: ImportarPageProps
 
     const salesToSave = tempSales.map(s => ({ ...s, fileId }));
 
-    const existingFiles = SalesService.getImportedFiles(company);
-    SalesService.saveImportedFiles(company, [newFile, ...existingFiles]);
-
-    const existingSales = SalesService.getSales(company);
-    SalesService.saveSales(company, [...existingSales, ...salesToSave]);
+    await SalesService.saveImportedFiles(organizationId, [newFile]);
+    await SalesService.saveSales(organizationId, salesToSave);
 
     setTempSales([]);
     setCurrentFileName(null);
     setImportSuccess(true);
-    setImportedFiles(SalesService.getImportedFiles(company));
+    
+    const files = await SalesService.getImportedFiles(organizationId);
+    setImportedFiles(files);
 
     setTimeout(() => setImportSuccess(false), 5000);
   };
 
-  const handleDeleteFile = (fileId: string) => {
-    SalesService.deleteImportedFile(company, fileId);
-    setImportedFiles(SalesService.getImportedFiles(company));
+  const handleDeleteFile = async (fileId: string) => {
+    if (!organizationId) return;
+    await SalesService.deleteImportedFile(organizationId, fileId);
+    const files = await SalesService.getImportedFiles(organizationId);
+    setImportedFiles(files);
   };
 
   const handleCancelExport = () => {

@@ -23,6 +23,7 @@ type Tab = 'inicio' | 'importar' | 'configuracoes';
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentOrgId, setCurrentOrgId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [permissions, setPermissions] = useState<UserPermissions>(DEFAULT_USER_PERMISSIONS);
   const [activeTab, setActiveTab] = useState<Tab>('inicio');
@@ -38,7 +39,12 @@ export default function App() {
       .eq('name', companyName)
       .single();
 
-    if (!orgData) return;
+    if (!orgData) {
+      setCurrentOrgId(null);
+      return;
+    }
+
+    setCurrentOrgId(orgData.id);
 
     const { data, error } = await supabase
       .from('organization_members')
@@ -109,6 +115,7 @@ export default function App() {
         
         if (event === 'SIGNED_OUT') {
           setUserRole('user');
+          setCurrentOrgId(null);
           setPermissions(DEFAULT_USER_PERMISSIONS);
         }
       }
@@ -144,10 +151,10 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'inicio': return <InicioPage company={activeCompany} permissions={permissions} />;
-      case 'importar': return <ImportarPage company={activeCompany} permissions={permissions} />;
+      case 'inicio': return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
+      case 'importar': return <ImportarPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
       case 'configuracoes': return <ConfiguracoesPage userRole={userRole} company={activeCompany} permissions={permissions} />;
-      default: return <InicioPage company={activeCompany} permissions={permissions} />;
+      default: return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
     }
   };
 
