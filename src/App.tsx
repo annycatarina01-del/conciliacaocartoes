@@ -64,22 +64,42 @@ export default function App() {
 
   useEffect(() => {
     // Initial load
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsAuthenticated(true);
-        fetchUserRole(session.user.id, activeCompany);
-      } else {
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (session) {
+          setIsAuthenticated(true);
+          fetchUserRole(session.user.id, activeCompany);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error: any) {
+        console.error("Erro ao recuperar sessão:", error.message);
+        // Se o erro for de token inválido, forçamos o logout local
+        if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('invalid_grant')) {
+          await supabase.auth.signOut();
+        }
         setIsAuthenticated(false);
       }
-    });
+    };
+
+    checkInitialSession();
 
     // Listen to Auth State
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth Event:", event);
       if (session) {
         setIsAuthenticated(true);
         fetchUserRole(session.user.id, activeCompany);
       } else {
         setIsAuthenticated(false);
+        // Se houve uma falha no refresh, garantimos que o estado local esteja limpo
+        if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+          setUserRole('user');
+          setPermissions(DEFAULT_USER_PERMISSIONS);
+        }
       }
     });
 

@@ -148,24 +148,32 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
     doc.text(`Volume Financeiro: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalAmount)}`, 14, 56);
 
     const tableColumn = ["Data", "Descrição", "Bandeira", "Parcelas", "Valor Bruto", "Taxa", "Valor Líquido", "NF", "Observações"];
-    const tableRows = filteredSales.map(s => [
-      s.date,
-      s.description,
-      s.cardBrand || '-',
-      s.installments ? `${s.installments}x` : '1x',
-      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.amount),
-      s.fee ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.fee) : '-',
-      s.netAmount ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.netAmount) : '-',
-      s.invoiceNumber || '-',
-      s.observation || '-'
-    ]);
+    const tableRows = filteredSales.map(s => {
+      const displayFee = (activeTab === 'Mulvi' && s.netAmount !== undefined) 
+        ? s.amount - s.netAmount 
+        : s.fee;
+
+      return [
+        s.date,
+        s.description,
+        s.cardBrand || '-',
+        s.installments ? `${s.installments}x` : '1x',
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.amount),
+        displayFee !== undefined ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(displayFee) : '-',
+        s.netAmount !== undefined ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.netAmount) : '-',
+        s.invoiceNumber || '-',
+        s.observation || '-'
+      ];
+    });
+
+    const headFillColor = activeTab === 'PagBank' ? [194, 65, 12] : [21, 128, 61];
 
     autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 62,
       styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' }, // Indigo 600
+      headStyles: { fillColor: headFillColor, textColor: [255, 255, 255], fontStyle: 'bold' }, 
       alternateRowStyles: { fillColor: [248, 250, 252] }, // slate-50
       columnStyles: {
         0: { cellWidth: 25 }, // Data
@@ -177,6 +185,16 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
         6: { cellWidth: 30 }, // Valor Líquido
         7: { cellWidth: 20 }, // NF
         8: { cellWidth: 40 }, // Observações
+      },
+      didParseCell: (data) => {
+        // Index 7 is the NF column
+        if (data.section === 'body' && data.column.index === 7) {
+          const content = data.cell.raw;
+          if (content && content !== '-') {
+            data.cell.styles.textColor = [220, 38, 38]; // Red 600
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
       }
     });
 

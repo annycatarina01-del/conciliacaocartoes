@@ -42,8 +42,12 @@ export default function LoginPage() {
       }
 
       if (mode === 'signup') {
-        setSuccessMsg('Conta criada com sucesso! Verifique seu e-mail de confirmação.');
+        setSuccessMsg('Conta criada com sucesso! Você já pode entrar.');
         setIsLoading(false);
+        // Mudar para o modo de login para o usuário entrar imediatamente
+        setMode('login');
+        setPassword('');
+        setConfirmPassword('');
       }
     } catch (err: any) {
       setErrorMsg('Ocorreu um erro inesperado. Tente novamente mais tarde.');

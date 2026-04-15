@@ -23,7 +23,7 @@ export class SalesService {
     }
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash-lite",
         contents: `Analise o seguinte texto extraído de um relatório de vendas da maquininha ${provider} e extraia uma lista de vendas estruturada. 
         É fundamental extrair com precisão os valores de TAXA e VALOR LÍQUIDO de cada transação, conforme aparecem no relatório original.
         
