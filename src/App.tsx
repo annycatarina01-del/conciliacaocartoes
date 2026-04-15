@@ -22,6 +22,7 @@ type Tab = 'inicio' | 'importar' | 'configuracoes';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [permissions, setPermissions] = useState<UserPermissions>(DEFAULT_USER_PERMISSIONS);
   const [activeTab, setActiveTab] = useState<Tab>('inicio');
@@ -62,49 +63,68 @@ export default function App() {
     }
   };
 
+  // Global Authentication Listener
   useEffect(() => {
-    // Initial load
+    // Initial session check
     const checkInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
         
         if (session) {
+          setCurrentUser(session.user);
           setIsAuthenticated(true);
-          fetchUserRole(session.user.id, activeCompany);
         } else {
+          setCurrentUser(null);
           setIsAuthenticated(false);
         }
       } catch (error: any) {
-        console.error("Erro ao recuperar sessão:", error.message);
-        // Se o erro for de token inválido, forçamos o logout local
+        // Prevent flood of "Refresh Token Not Found" in console if it's already handled
+        if (!error.message?.includes('Refresh Token Not Found')) {
+          console.error("Erro ao recuperar sessão inicial:", error.message);
+        }
+        
+        // Force clean state on refresh error
         if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('invalid_grant')) {
           await supabase.auth.signOut();
         }
+        
+        setCurrentUser(null);
         setIsAuthenticated(false);
       }
     };
 
     checkInitialSession();
 
-    // Listen to Auth State
+    // Persistent Auth State Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth Event:", event);
+      
       if (session) {
+        setCurrentUser(session.user);
         setIsAuthenticated(true);
-        fetchUserRole(session.user.id, activeCompany);
       } else {
+        setCurrentUser(null);
         setIsAuthenticated(false);
-        // Se houve uma falha no refresh, garantimos que o estado local esteja limpo
-        if (event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+        
+        if (event === 'SIGNED_OUT') {
           setUserRole('user');
           setPermissions(DEFAULT_USER_PERMISSIONS);
         }
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [activeCompany]);
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Fetch Permissions when User or Company changes
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchUserRole(currentUser.id, activeCompany);
+    }
+  }, [currentUser?.id, activeCompany]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -113,13 +133,6 @@ export default function App() {
   const handleCompanyChange = (company: Company) => {
     setActiveCompany(company);
     setIsCompanyDropdownOpen(false);
-
-    // Recarregar permissões para a nova empresa
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        fetchUserRole(session.user.id, company);
-      }
-    });
   };
 
   const allTabs = [
