@@ -147,13 +147,30 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
     doc.text(`Total de Transações: ${filteredSales.length}`, 14, 50);
     doc.text(`Volume Financeiro: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalAmount)}`, 14, 56);
 
-    const tableColumn = ["Data", "Descrição", "Bandeira", "Parcelas", "Valor Bruto", "Taxa", "Valor Líquido", "NF", "Observações"];
+    const isPagBank = activeTab === 'PagBank';
+    
+    const columnConfigs = [
+      { header: "Data", width: 25 },
+      { header: "Descrição", width: 'auto' },
+      { header: "Bandeira", width: 25, hideForPagBank: true },
+      { header: "Parcelas", width: 20, hideForPagBank: true },
+      { header: "Valor Bruto", width: 30 },
+      { header: "Taxa", width: 25 },
+      { header: "Valor Líquido", width: 30 },
+      { header: "NF", width: 20, isNF: true },
+      { header: "Observações", width: 40 },
+    ];
+
+    const activeConfigs = columnConfigs.filter(c => !(isPagBank && (c as any).hideForPagBank));
+    const tableColumn = activeConfigs.map(c => c.header);
+    const nfColumnIndex = activeConfigs.findIndex(c => (c as any).isNF);
+
     const tableRows = filteredSales.map(s => {
       const displayFee = (activeTab === 'Mulvi' && s.netAmount !== undefined) 
         ? s.amount - s.netAmount 
         : s.fee;
 
-      return [
+      const fullRow = [
         s.date,
         s.description,
         s.cardBrand || '-',
@@ -164,6 +181,13 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
         s.invoiceNumber || '-',
         s.observation || '-'
       ];
+
+      return fullRow.filter((_, i) => !(isPagBank && columnConfigs[i].hideForPagBank));
+    });
+
+    const columnStyles: any = {};
+    activeConfigs.forEach((c, i) => {
+      columnStyles[i] = { cellWidth: c.width };
     });
 
     const headFillColor = activeTab === 'PagBank' ? [194, 65, 12] : [21, 128, 61];
@@ -175,20 +199,9 @@ export default function InicioPage({ company, permissions }: InicioPageProps) {
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: headFillColor, textColor: [255, 255, 255], fontStyle: 'bold' }, 
       alternateRowStyles: { fillColor: [248, 250, 252] }, // slate-50
-      columnStyles: {
-        0: { cellWidth: 25 }, // Data
-        1: { cellWidth: 'auto' }, // Descrição
-        2: { cellWidth: 25 }, // Bandeira
-        3: { cellWidth: 20 }, // Parcelas
-        4: { cellWidth: 30 }, // Valor Bruto
-        5: { cellWidth: 25 }, // Taxa
-        6: { cellWidth: 30 }, // Valor Líquido
-        7: { cellWidth: 20 }, // NF
-        8: { cellWidth: 40 }, // Observações
-      },
+      columnStyles: columnStyles,
       didParseCell: (data) => {
-        // Index 7 is the NF column
-        if (data.section === 'body' && data.column.index === 7) {
+        if (data.section === 'body' && data.column.index === nfColumnIndex) {
           const content = data.cell.raw;
           if (content && content !== '-') {
             data.cell.styles.textColor = [220, 38, 38]; // Red 600
