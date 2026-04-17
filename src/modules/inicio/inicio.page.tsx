@@ -9,6 +9,44 @@ import { cn, formatDate } from '../../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+/**
+ * Parseia uma string de data no formato DD/MM/YYYY [HH:MM[:SS]] de forma segura,
+ * sem usar new Date(string) para evitar problemas de timezone e inversão de mês/dia.
+ * Retorna um objeto Date com hora local ou null se inválida.
+ */
+function parseBrazilianDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+
+  // Formato DD/MM/YYYY [HH:MM[:SS]]
+  const match = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (match) {
+    const [, dd, mm, yyyy, hh = '0', min = '0', ss = '0'] = match;
+    return new Date(
+      parseInt(yyyy),
+      parseInt(mm) - 1,
+      parseInt(dd),
+      parseInt(hh),
+      parseInt(min),
+      parseInt(ss)
+    );
+  }
+
+  // Fallback para formato ISO (YYYY-MM-DD[THH:MM])
+  const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (isoMatch) {
+    const [, yyyy, mm, dd, hh = '0', min = '0'] = isoMatch;
+    return new Date(
+      parseInt(yyyy),
+      parseInt(mm) - 1,
+      parseInt(dd),
+      parseInt(hh),
+      parseInt(min)
+    );
+  }
+
+  return null;
+}
+
 interface InicioPageProps {
   organizationId: string | null;
   company: Company;
@@ -36,23 +74,23 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
         if (data.length > 0) {
           const now = new Date();
           const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-          
+
+          const toMonthStr = (dateObj: Date) =>
+            `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+
           const hasCurrentMonthData = data.some(s => {
-            const dateObj = s.date.includes('/') 
-              ? new Date(parseInt(s.date.split('/')[2]), parseInt(s.date.split('/')[1]) - 1, parseInt(s.date.split('/')[0]))
-              : new Date(s.date);
-            const mStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-            return mStr === currentMonthStr;
+            const dateObj = parseBrazilianDate(s.date);
+            return dateObj ? toMonthStr(dateObj) === currentMonthStr : false;
           });
 
           if (!hasCurrentMonthData) {
-            const months = data.map(s => {
-              const dateObj = s.date.includes('/')
-                ? new Date(parseInt(s.date.split('/')[2]), parseInt(s.date.split('/')[1]) - 1, parseInt(s.date.split('/')[0]))
-                : new Date(s.date);
-              return !isNaN(dateObj.getTime()) ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}` : null;
-            }).filter(Boolean) as string[];
-            
+            const months = data
+              .map(s => {
+                const dateObj = parseBrazilianDate(s.date);
+                return dateObj ? toMonthStr(dateObj) : null;
+              })
+              .filter(Boolean) as string[];
+
             const sortedMonths = [...new Set(months)].sort().reverse();
             if (sortedMonths.length > 0) {
               setSelectedMonth(sortedMonths[0]);
@@ -110,23 +148,13 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
-    
+
     // Sempre incluir o mês atual
     const d = new Date();
     months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
 
     sales.forEach(s => {
-      let dateObj;
-      if (s.date.includes('/')) {
-        const parts = s.date.split('/');
-        if (parts.length === 3) {
-          // Assuming DD/MM/YYYY
-          dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-        }
-      } else {
-        dateObj = new Date(s.date);
-      }
-      
+      const dateObj = parseBrazilianDate(s.date);
       if (dateObj && !isNaN(dateObj.getTime())) {
         const monthStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
         months.add(monthStr);
@@ -140,17 +168,8 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
       .filter(s => {
         if (s.provider !== activeTab) return false;
         if (selectedMonth === 'all') return true;
-        
-        let dateObj;
-        if (s.date.includes('/')) {
-          const parts = s.date.split('/');
-          if (parts.length === 3) {
-            dateObj = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-          }
-        } else {
-          dateObj = new Date(s.date);
-        }
-        
+
+        const dateObj = parseBrazilianDate(s.date);
         if (dateObj && !isNaN(dateObj.getTime())) {
           const monthStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
           return monthStr === selectedMonth;
@@ -158,14 +177,9 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
         return false;
       })
       .sort((a, b) => {
-        const parseDate = (d: string) => {
-          if (d.includes('/')) {
-            const [day, month, year] = d.split('/');
-            return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).getTime();
-          }
-          return new Date(d).getTime();
-        };
-        return parseDate(a.date) - parseDate(b.date);
+        const ta = parseBrazilianDate(a.date)?.getTime() ?? 0;
+        const tb = parseBrazilianDate(b.date)?.getTime() ?? 0;
+        return ta - tb;
       });
   }, [sales, activeTab, selectedMonth]);
 

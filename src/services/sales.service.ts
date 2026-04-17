@@ -73,7 +73,7 @@ export class SalesService {
       .from('sales')
       .select('*')
       .eq('organization_id', organizationId)
-      .order('date', { ascending: true });
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error("Erro ao buscar vendas:", error);

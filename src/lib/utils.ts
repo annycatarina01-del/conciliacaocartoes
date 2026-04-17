@@ -6,32 +6,31 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Formata a data para o padrão DD/MM/YYYY HH:MM.
- * Aceita datas no formato ISO (2026-04-15T13:35:00) ou já no formato
- * brasileiro (15/04/2026 13:35 ou 15/04/2026 13:35:22).
+ * Retorna a data/hora exatamente como está armazenada (formato DD/MM/YYYY HH:MM).
+ * Evita qualquer conversão via objeto Date para não sofrer com problemas de timezone.
+ * Para strings ISO (2026-04-17T14:35:00), converte manualmente sem usar Date.
  */
 export function formatDate(date: string): string {
   if (!date) return '';
 
-  // Já está no formato DD/MM/YYYY ... — apenas garantir HH:MM no final
+  // Já está no formato DD/MM/YYYY [HH:MM[:SS]] — retorna como está (no máximo HH:MM)
   if (/^\d{2}\/\d{2}\/\d{4}/.test(date)) {
     const [datePart, timePart] = date.split(' ');
     if (timePart) {
-      const [hh, mm] = timePart.split(':');
-      return `${datePart} ${hh}:${mm}`;
+      const parts = timePart.split(':');
+      return `${datePart} ${parts[0]}:${parts[1]}`;
     }
     return datePart;
   }
 
-  // Tenta converter de ISO ou outro formato reconhecível por Date
-  const d = new Date(date);
-  if (!isNaN(d.getTime())) {
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+  // Formato ISO: YYYY-MM-DDTHH:MM:SS ou YYYY-MM-DD HH:MM:SS ou YYYY-MM-DD
+  const isoMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (isoMatch) {
+    const [, yyyy, MM, dd, hh, min] = isoMatch;
+    if (hh && min) {
+      return `${dd}/${MM}/${yyyy} ${hh}:${min}`;
+    }
+    return `${dd}/${MM}/${yyyy}`;
   }
 
   // Fallback: retorna como veio
