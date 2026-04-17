@@ -31,6 +31,44 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
       if (organizationId) {
         const data = await SalesService.getSales(organizationId);
         setSales(data);
+
+        // Auto-selecionar o mês mais recente se o atual estiver vazio
+        if (data.length > 0) {
+          const now = new Date();
+          const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          
+          const hasCurrentMonthData = data.some(s => {
+            const dateObj = s.date.includes('/') 
+              ? new Date(parseInt(s.date.split('/')[2]), parseInt(s.date.split('/')[1]) - 1, parseInt(s.date.split('/')[0]))
+              : new Date(s.date);
+            const mStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+            return mStr === currentMonthStr;
+          });
+
+          if (!hasCurrentMonthData) {
+            const months = data.map(s => {
+              const dateObj = s.date.includes('/')
+                ? new Date(parseInt(s.date.split('/')[2]), parseInt(s.date.split('/')[1]) - 1, parseInt(s.date.split('/')[0]))
+                : new Date(s.date);
+              return !isNaN(dateObj.getTime()) ? `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}` : null;
+            }).filter(Boolean) as string[];
+            
+            const sortedMonths = [...new Set(months)].sort().reverse();
+            if (sortedMonths.length > 0) {
+              setSelectedMonth(sortedMonths[0]);
+            }
+          }
+
+          // Auto-selecionar o provedor se o atual estiver vazio mas o outro tiver dados
+          const hasPagBank = data.some(s => s.provider === 'PagBank');
+          const hasMulvi = data.some(s => s.provider === 'Mulvi');
+
+          if (activeTab === 'PagBank' && !hasPagBank && hasMulvi) {
+            setActiveTab('Mulvi');
+          } else if (activeTab === 'Mulvi' && !hasMulvi && hasPagBank) {
+            setActiveTab('PagBank');
+          }
+        }
       }
     };
     loadData();

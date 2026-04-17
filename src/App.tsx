@@ -153,7 +153,7 @@ export default function App() {
     switch (activeTab) {
       case 'inicio': return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
       case 'importar': return <ImportarPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
-      case 'configuracoes': return <ConfiguracoesPage userRole={userRole} company={activeCompany} permissions={permissions} />;
+      case 'configuracoes': return <ConfiguracoesPage userRole={userRole} company={activeCompany} permissions={permissions} organizationId={currentOrgId} />;
       default: return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
     }
   };

@@ -11,11 +11,12 @@ interface ConfiguracoesPageProps {
   userRole?: 'admin' | 'user';
   company: Company;
   permissions?: UserPermissions;
+  organizationId: string | null;
 }
 
 type Tab = 'geral' | 'permissoes';
 
-export default function ConfiguracoesPage({ userRole = 'user', company, permissions }: ConfiguracoesPageProps) {
+export default function ConfiguracoesPage({ userRole = 'user', company, permissions, organizationId }: ConfiguracoesPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>('geral');
   const [members, setMembers] = useState<Member[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -48,8 +49,10 @@ export default function ConfiguracoesPage({ userRole = 'user', company, permissi
 
   const handleClearData = () => {
     if (confirm(`ATENÇÃO: Isso apagará permanentemente todas as transações importadas da empresa ${company}. Deseja continuar?`)) {
-      SalesService.clearAll(company);
-      window.location.reload();
+      if (organizationId) {
+        SalesService.clearAll(organizationId);
+        window.location.reload();
+      }
     }
   };
 
