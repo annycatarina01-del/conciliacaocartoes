@@ -1,7 +1,8 @@
 import React from 'react';
 import { Sale } from '../../types/sales';
 import { CheckCircle2, Circle, Trash2, Hash, CreditCard, MessageSquare } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatDate } from '../../lib/utils';
+
 
 interface SalesTableProps {
   sales: Sale[];
@@ -65,7 +66,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                   )}
                 </button>
               </td>
-              <td className="px-6 py-4 text-sm text-slate-500 font-mono">{sale.date}</td>
+              <td className="px-6 py-4 text-sm text-slate-500 font-mono">{formatDate(sale.date)}</td>
               <td className="px-6 py-4">
                 <div className="text-sm font-bold text-slate-900">{sale.description}</div>
                 {sale.cardBrand && (

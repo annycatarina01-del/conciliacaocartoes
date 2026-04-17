@@ -5,7 +5,7 @@ import { UserPermissions } from '../../types/permissions';
 import { COMPANY_DATA } from '../../constants/companies';
 import { SalesTable } from '../../components/sales/SalesTable';
 import { LayoutDashboard, TrendingUp, CheckCircle, Clock, CreditCard, CalendarDays, Download } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, formatDate } from '../../lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -236,7 +236,7 @@ export default function InicioPage({ organizationId, company, permissions }: Ini
         : s.fee;
 
       const fullRow = [
-        s.date,
+        formatDate(s.date),
         s.description,
         s.cardBrand || '-',
         s.installments ? `${s.installments}x` : '1x',
