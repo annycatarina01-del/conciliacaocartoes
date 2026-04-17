@@ -30,6 +30,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeCompany, setActiveCompany] = useState<Company>('SUPORTE MATRIZ');
   const [isCompanyDropdownOpen, setIsCompanyDropdownOpen] = useState(false);
+  const [inicioRefreshKey, setInicioRefreshKey] = useState(0);
 
   const fetchUserRole = async (userId: string, companyName: Company) => {
     // Primeiro, buscar a organização pelo nome (já que o seletor usa nomes)
@@ -149,12 +150,20 @@ export default function App() {
   ];
   const tabs = allTabs.filter(t => t.allowed);
 
+  const handleTabChange = (tab: Tab) => {
+    if (tab === 'inicio') {
+      // Incrementa a key para forçar remount e recarregar dados
+      setInicioRefreshKey(k => k + 1);
+    }
+    setActiveTab(tab);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
-      case 'inicio': return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
+      case 'inicio': return <InicioPage key={inicioRefreshKey} organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
       case 'importar': return <ImportarPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
       case 'configuracoes': return <ConfiguracoesPage userRole={userRole} company={activeCompany} permissions={permissions} organizationId={currentOrgId} />;
-      default: return <InicioPage organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
+      default: return <InicioPage key={inicioRefreshKey} organizationId={currentOrgId} company={activeCompany} permissions={permissions} />;
     }
   };
 
@@ -247,7 +256,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => {
-                  setActiveTab(tab.id as Tab);
+                  handleTabChange(tab.id as Tab);
                   setIsSidebarOpen(false);
                 }}
                 className={cn(
