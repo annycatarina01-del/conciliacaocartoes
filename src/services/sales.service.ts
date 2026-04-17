@@ -17,7 +17,7 @@ export class SalesService {
     }
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-1.5-flash",
         contents: `Analise o seguinte texto extraído de um relatório de vendas da maquininha ${provider} e extraia uma lista de vendas estruturada.
         REGRAS IMPORTANTES:
         1. O campo "date" deve ser copiado EXATAMENTE como aparece no relatório original, incluindo data e hora se presentes (ex: "17/04/2026 14:35" ou "17/04/2026 14:35:22"). NÃO converta para formato ISO nem remova a hora.
